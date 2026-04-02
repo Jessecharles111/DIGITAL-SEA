@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web App Builder · Local LLM API</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, monospace;
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+            background: #0a0c10;
+            color: #e4e6eb;
+        }
+        h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+        .sub { color: #8b8f9c; margin-bottom: 2rem; border-left: 3px solid #3b82f6; padding-left: 1rem; }
+        textarea {
+            width: 100%;
+            height: 160px;
+            font-family: 'Fira Code', monospace;
+            background: #1e1f2c;
+            color: #f0f0f0;
+            border: 1px solid #2d2f3e;
+            border-radius: 12px;
+            padding: 1rem;
+            font-size: 0.9rem;
+            resize: vertical;
+        }
+        button {
+            background: #3b82f6;
+            border: none;
+            padding: 0.75rem 1.8rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 40px;
+            cursor: pointer;
+            color: white;
+            transition: 0.2s;
+            margin-top: 0.5rem;
+        }
+        button:hover { background: #2563eb; transform: scale(0.98); }
+        .loading {
+            display: none;
+            margin-top: 1rem;
+            color: #60a5fa;
+        }
+        pre {
+            background: #1e1f2c;
+            padding: 1.2rem;
+            border-radius: 16px;
+            overflow-x: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            border: 1px solid #2d2f3e;
+        }
+        hr { border-color: #2d2f3e; margin: 2rem 0; }
+    </style>
+</head>
+<body>
+    <h1>🤖 AI Web App Builder</h1>
+    <div class="sub">Code generation with DeepSeek-Coder 6.7B · running locally inside your Codespace</div>
+
+    <label for="prompt"><strong>📝 Describe the code you need</strong></label>
+    <textarea id="prompt" placeholder="Example: Write a React hook that fetches data from an API and handles loading/error states."></textarea>
+    <br/>
+    <button onclick="generateCode()">✨ Generate Code</button>
+
+    <div id="loading" class="loading">⏳ Generating, please wait...</div>
+
+    <h3>💻 Generated Output</h3>
+    <pre id="output">// Your code will appear here</pre>
+
+    <hr/>
+    <details>
+        <summary>⚙️ API Info</summary>
+        <p>Your API endpoint: <code id="apiUrl"></code></p>
+        <p>Model: <code>deepseek-coder:6.7b</code></p>
+    </details>
+
+    <script>
+        const API_BASE = window.location.origin;  // because we serve static from same origin
+        document.getElementById('apiUrl').innerText = `${API_BASE}/generate`;
+
+        async function generateCode() {
+            const prompt = document.getElementById('prompt').value.trim();
+            if (!prompt) {
+                alert('Please enter a description of the code you need.');
+                return;
+            }
+
+            const loadingDiv = document.getElementById('loading');
+            const outputPre = document.getElementById('output');
+            outputPre.innerText = '⏳ Generating...';
+            loadingDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        prompt: `Generate production‑ready code. Only output the code, no explanations.\n\n${prompt}`,
+                        max_tokens: 1024,
+                        temperature: 0.2
+                    })
+                });
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${errText}`);
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    outputPre.innerText = data.output;
+                } else {
+                    outputPre.innerText = `Error: ${data.error || 'Unknown error'}`;
+                }
+            } catch (err) {
+                console.error(err);
+                outputPre.innerText = `❌ Request failed: ${err.message}\n\nMake sure the API server is running (npm start) and Ollama is ready.`;
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
